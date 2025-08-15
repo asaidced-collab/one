@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>استمارة التحكيم</title>
+  <style>
+    body { font-family: system-ui, "Segoe UI", Tahoma, Arial; line-height: 1.7; margin: 0; background:#fafafa; color:#222; }
+    .container { max-width: 900px; margin: 24px auto; background:#fff; padding: 24px; border-radius: 16px; box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+    h1, h2 { margin-top: 0; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .navigation-buttons { display: flex; gap: 12px; margin-top: 20px; }
+    .btn { padding: 10px 16px; border: none; border-radius: 10px; cursor: pointer; background:#1a73e8; color:#fff; font-weight:600; }
+    .btn:disabled { opacity:.5; cursor: not-allowed; }
+    .btn-secondary { background:#737373; }
+    .progress { background:#eee; height:10px; border-radius:999px; overflow:hidden; margin: 16px 0 24px; }
+    .progress > span { display:block; height:100%; width:0%; background:#1a73e8; transition:width .3s; }
+    .field { margin: 12px 0; }
+    label { display:block; margin-bottom:6px; font-weight:600; }
+    input[type="text"], textarea, select { width: 100%; padding: 10px; border-radius: 10px; border:1px solid #ddd; }
+    .hint { color:#666; font-size:.9em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>استمارة التحكيم</h1>
+    <div class="progress"><span id="progressFill"></span></div>
+
+    <!-- الصفحة 0: الغلاف -->
+    <section class="page active" id="page0">
+      <h2>مرحبًا بك</h2>
+      <p>اضغط الزر لبدء التحكيم.</p>
+      <div class="navigation-buttons">
+        <button class="btn" id="startBtn" type="button">بدء التحكيم</button>
+      </div>
+    </section>
+
+    <!-- الصفحة 1: مثال لأسئلة (عدّلها لاحقًا كما تريد) -->
+    <section class="page" id="page1">
+      <h2>المحور الأول</h2>
+      <div class="field">
+        <label>اسم المقيّم</label>
+        <input type="text" name="اسم المقيّم" placeholder="مثال: د. أحمد"/>
+      </div>
+      <div class="field">
+        <label>مستوى الرضا</label>
+        <select name="مستوى الرضا">
+          <option value="">اختر...</option>
+          <option value="1">1 - منخفض</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5 - مرتفع</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>ملاحظات</label>
+        <textarea name="الملاحظات" rows="4" placeholder="اكتب ملاحظاتك"></textarea>
+      </div>
+
+      <div class="navigation-buttons">
+        <button class="btn-secondary btn" type="button" id="prev1">السابق</button>
+        <button class="btn" type="button" id="next1">التالي</button>
+      </div>
+    </section>
+
+    <!-- الصفحة 2: مثال محاور إضافية -->
+    <section class="page" id="page2">
+      <h2>المحور الثاني</h2>
+      <div class="field">
+        <label>عناصر القوة (اختر ما ينطبق)</label>
+        <label><input type="checkbox" name="عناصر القوة" value="تنظيم جيد"> تنظيم جيد</label>
+        <label><input type="checkbox" name="عناصر القوة" value="وضوح في الأهداف"> وضوح في الأهداف</label>
+        <label><input type="checkbox" name="عناصر القوة" value="تفاعل المشاركين"> تفاعل المشاركين</label>
+      </div>
+
+      <div class="navigation-buttons">
+        <button class="btn-secondary btn" type="button" id="prev2">السابق</button>
+        <button class="btn" type="button" id="next2">التالي</button>
+      </div>
+    </section>
+
+    <!-- الصفحة الأخيرة: الإرسال -->
+    <section class="page" id="page3">
+      <h2>إرسال التحكيم</h2>
+      <p class="hint">عند الضغط على "إرسال التحكيم" سيتم إرسال البيانات إلى Google Sheet.</p>
+      <div class="navigation-buttons">
+        <button class="btn-secondary btn" type="button" id="prev3">السابق</button>
+        <button class="btn" type="button" id="submitBtn">إرسال التحكيم</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // ====== بيانات النموذج في الذاكرة المحلية
+    window.formData = {}
+
+    // ====== الصفحات والتنقل
+    const pages = Array.from(document.querySelectorAll('.page'));
+    let currentPage = 0;
+
+    function updateProgress() {
+      const fill = document.getElementById('progressFill');
+      const progress = ((currentPage + 1) / pages.length) * 100;
+      fill.style.width = progress + '%';
+    }
+
+    function goTo(i) {
+      if (i < 0 || i >= pages.length) return;
+      pages[currentPage].classList.remove('active');
+      currentPage = i;
+      pages[currentPage].classList.add('active');
+      updateProgress();
+      window.scrollTo(0,0);
+    }
+
+    function nextPage() { saveCurrentPageData(); goTo(currentPage + 1); }
+    function prevPage() { saveCurrentPageData(); goTo(currentPage - 1); }
+
+    // ====== حفظ الصفحة الحالية بدون تكرار للـ checkbox
+    function saveCurrentPageData() {
+      const el = pages[currentPage];
+      const inputs = el.querySelectorAll('input, textarea, select');
+      const pageData = {};
+
+      inputs.forEach(input => {
+        const name = input.name;
+        if (!name) return;
+        const type = (input.type || '').toLowerCase();
+        if (type === 'checkbox') {
+          if (!pageData[name]) pageData[name] = [];
+          if (input.checked) pageData[name].push(input.value);
+        } else if (type === 'radio') {
+          if (input.checked) pageData[name] = input.value;
+        } else {
+          pageData[name] = input.value || '';
+        }
+      });
+
+      Object.assign(window.formData, pageData);
+      try { localStorage.setItem('evaluationFormData', JSON.stringify(window.formData)); } catch (e) {}
+    }
+
+    // ====== إرسال إلى Google Apps Script (بصيغة x-www-form-urlencoded)
+    async function submitForm() {
+      saveCurrentPageData();
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(window.formData)) {
+        if (Array.isArray(v)) params.append(k, v.join('; '));
+        else params.append(k, v ?? '');
+      }
+      try {
+        await fetch('https://script.google.com/macros/s/AKfycbynE0vkK3HTcbkpRecHKpkcnPGS3MvelMvJboYvQKpQ4IOAK6bgOxnOlxbJghYpGbgQxQ/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: params.toString(),
+          mode: 'no-cors'
+        });
+        alert('تم إرسال النموذج ✔');
+      } catch (e) {
+        console.error(e);
+        alert('تعذّر الإرسال. تأكد من إعداد Web App.');
+      }
+    }
+
+    // ====== ربط الأزرار
+    document.getElementById('startBtn').addEventListener('click', () => goTo(1));
+    document.getElementById('next1').addEventListener('click', nextPage);
+    document.getElementById('prev1').addEventListener('click', prevPage);
+    document.getElementById('next2').addEventListener('click', nextPage);
+    document.getElementById('prev2').addEventListener('click', prevPage);
+    document.getElementById('prev3').addEventListener('click', prevPage);
+    document.getElementById('submitBtn').addEventListener('click', submitForm);
+
+    // تهيئة
+    updateProgress();
+  </script>
+</body>
+</html>
